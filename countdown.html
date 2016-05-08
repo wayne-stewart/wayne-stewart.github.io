@@ -1,0 +1,86 @@
+<html>
+<head>
+<title>Count Down</title>
+<style>
+    * {
+        padding:0px;
+        margin:0px;
+        text-align:center;
+    }
+    body {
+        background-color:#4f628e;
+    }
+    table {
+        width:100%;
+        height:100%;
+    }
+    #content {
+        color:#061539;
+        font-size:4em;
+    }
+</style>
+<script>
+    var msins = 1000;
+    var sinm = 60;
+    var minh = 60;
+    var hind = 24;
+    var diny = 365;
+    var msinm = msins * sinm;
+    var msinh = minh * msinm;
+    var msind = hind * msinh;
+    
+    var formatTime = function(ts) {
+
+        var d = Math.floor(ts / msind);
+        var ms = ts % msind;
+        var h = Math.floor(ms / msinh);
+        ms = ms % msinh;
+        var m = Math.floor(ms / msinm);
+        ms = ms % msinm;
+        var s = Math.floor(ms / msins);
+        ms = ms % msins;
+        
+        if (ms.toString().length == 1)
+            ms = "00" + ms.toString();
+        if (ms.toString().length == 2)
+            ms = "0" + ms.toString();
+        if (s.toString().length == 1)
+            s = "0" + s.toString();
+        if (m.toString().length == 1)
+            m = "0" + m.toString();
+        if (h.toString().length == 1)
+            h = "0" + h.toString();
+        
+        return d + ":" + h + ":" + m + ":" + s + ":" + ms;
+    };
+    
+    window.onload = function() {
+        var span = document.getElementById("content");
+        var timesup = new Date(2018, 9 ,18);
+        setInterval(function() {
+            var now = new Date();
+            var ts = timesup - now;
+            if (ts < 0) {
+                span.innerHTML = "Times Up!";
+            } else {
+                var days = Math.floor(ts / 1000 / 60 / 60 / 24);
+                var weeks = days / 7;
+                var workingdays = Math.floor(days - weeks * 2);
+                var pto = Math.floor(days / 365 * 23);
+                var workingdaysnopto = workingdays - pto;
+                span.innerHTML = formatTime(ts) + "<br />" + workingdaysnopto;
+            }
+        }, 100);
+    };
+</script>
+</head>
+<body>
+    <table cellpadding="0" cellmargin="0">
+        <tr>
+            <td>
+                <span id="content"></span>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
