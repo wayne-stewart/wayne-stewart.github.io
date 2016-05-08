@@ -51,7 +51,7 @@
         if (h.toString().length == 1)
             h = "0" + h.toString();
         
-        return d + ":" + h + ":" + m + ":" + s + ":" + ms;
+        return d + ":" + h + ":" + m + ":" + s; // + ":" + ms;
     };
     
     window.onload = function() {
@@ -70,7 +70,7 @@
                 var workingdaysnopto = workingdays - pto;
                 span.innerHTML = formatTime(ts) + "<br />" + workingdaysnopto;
             }
-        }, 137);
+        }, 250);
     };
 </script>
 </head>
