@@ -9,7 +9,7 @@
     if (canvasNodes.length > 0) { 
       let width = canvasNodes[0].width;
       let height = canvasNodes[0].height;
-      let bytes = new UInt8ClampedArray(width * height * 4);
+      let bytes = new Uint8ClampedArray(width * height * 4);
       for(let i = 0; i < canvasNodes.length; i++) { 
         let ctx = canvasNodes[i].getContext("2d");
         let imageData = worker_ctx.getImageData.apply(ctx, [0,0,width,height]);
