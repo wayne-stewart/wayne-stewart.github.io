@@ -30,7 +30,7 @@
         worker_data[i] = bytes[i];
       }
       worker_ctx.putImageData(worker_imageData, 0 ,0);
-      console.log(worker_canvas.toDataUrl());
+      console.log(worker_canvas.toDataURL());
     }
   }
   document.body.removeChild(iframe);
