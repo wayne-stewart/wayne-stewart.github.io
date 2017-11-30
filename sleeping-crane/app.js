@@ -25,7 +25,7 @@
       worker_canvas.width = width;
       worker_canvas.height = height;
       let worker_imageData = worker_ctx.createImageData(width, height);
-      let worker_data = imageData.data;
+      let worker_data = worker_imageData.data;
       for(let i = 0; i < bytes.length; i++) { 
         worker_data[i] = bytes[i];
       }
