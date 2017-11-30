@@ -6,7 +6,6 @@
   let divView = document.querySelector("#reader > #mask > .view");
   if (divView != null) {
     let canvasNodes = divView.querySelectorAll("canvas");
-    console.log(canvasNodes.length);
     if (canvasNodes.length > 0) { 
       let width = canvasNodes[0].width;
       let height = canvasNodes[0].height;
@@ -15,18 +14,17 @@
         let ctx = canvasNodes[i].getContext("2d");
         let imageData = worker_ctx.getImageData.apply(ctx, [0,0,width,height]);
         for(let j = 0; j < bytes.length; j+=4) { 
-          if (imageData.data[i+3] === 255) { 
-            bytes[i] = imageData.data[i];
-            bytes[i+1] = imageData.data[i+1];
-            bytes[i+2] = imageData.data[i+2];
-            bytes[i+3] = 255;
+          if (imageData.data[j+3] === 255) { 
+            bytes[j] = imageData.data[j];
+            bytes[j+1] = imageData.data[j+1];
+            bytes[j+2] = imageData.data[j+2];
+            bytes[j+3] = 255;
           }
         }
       }
       worker_canvas.width = width;
       worker_canvas.height = height;
       let worker_imageData = worker_ctx.createImageData(width, height);
-      console.log(bytes);
       for(let i = 0; i < bytes.length; i++) { 
         worker_imageData.data[i] = bytes[i];
       }
