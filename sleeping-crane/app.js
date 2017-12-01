@@ -39,6 +39,7 @@
     return null;
   };
 
-  console.log(renderPage());
+  //console.log(renderPage());
+  document.querySelector("body > button.right");
 
 })();
