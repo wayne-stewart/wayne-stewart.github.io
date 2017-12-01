@@ -40,6 +40,7 @@
   };
 
   //console.log(renderPage());
-  document.querySelector("body > button.right");
-
+  var btnRight = document.querySelector("body > button.right");
+  btnRight.click();
+  
 })();
