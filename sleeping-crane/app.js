@@ -15,11 +15,12 @@
         for(let i = 0; i < canvasNodes.length; i++) { 
           let ctx = canvasNodes[i].getContext("2d");
           let imageData = worker_ctx.getImageData.apply(ctx, [0,0,width,height]);
+          let data = imageData.data;
           for(let j = 0; j < bytes.length; j+=4) { 
-            if (imageData.data[j+3] === 255) { 
-              bytes[j] = imageData.data[j];
-              bytes[j+1] = imageData.data[j+1];
-              bytes[j+2] = imageData.data[j+2];
+            if (data[j+3] === 255) { 
+              bytes[j] = data[j];
+              bytes[j+1] = data[j+1];
+              bytes[j+2] = data[j+2];
               bytes[j+3] = 255;
             }
           }
@@ -42,5 +43,5 @@
   //console.log(renderPage());
   var btnRight = document.querySelector("body > button.right");
   btnRight.click();
-  
+
 })();
