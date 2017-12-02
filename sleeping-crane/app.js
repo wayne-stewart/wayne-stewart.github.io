@@ -71,14 +71,14 @@
     let label = document.createElement("label");
     label.style.position = "absolute";
     label.innerHTML = "Click to Cancel";
-    label.style.left = (ui.clientWidth / 2 - label.clientWidth / 2) + "px";
-    label.style.top = (ui.clientHeight / 2 - label.clientHeight / 2) + "px";
     ui.appendChild(label);
 
     this.show = function() {
       document.body.appendChild(ui);
       ui.style.top = (window.innerHeight / 2 - 50) + "px";
       ui.style.left = (window.innerWidth / 2 - 150) + "px";
+      label.style.left = (ui.clientWidth / 2 - label.clientWidth / 2) + "px";
+      label.style.top = (ui.clientHeight / 2 - label.clientHeight / 2) + "px";
     };
 
     this.hide = function() {
