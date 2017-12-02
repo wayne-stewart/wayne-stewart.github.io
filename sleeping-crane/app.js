@@ -41,17 +41,27 @@
   };
 
   //console.log(renderPage());
-  var btnRight = document.querySelector("body > button.right");
-  var modal = document.querySelector("body > div.modal-container");
-  var modalClose = modal.querySelector(".modal-close");
-  while(true) {
+  let btnRight = document.querySelector("body > button.right");
+  let modal = document.querySelector("body > div.modal-container");
+  let modalClose = modal.querySelector(".modal-close");
+
+  let max = 30;
+  let loop = function() { 
     console.log("render page");
     btnRight.click();
-    console.log("button clicked");
+    console.log("btn clicked");
     if (modal.style.display === "block") {
       console.log("last page reached");
       modalClose.click();
     }
-  }
+    else if (30 < max++) {
+      console.log("reached max count");
+    }
+    else {
+      setTimeout(loop, 2000);
+    }
+  };
+
+  loop();
 
 })();
