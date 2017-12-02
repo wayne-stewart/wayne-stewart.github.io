@@ -44,24 +44,72 @@
   let btnRight = document.querySelector("body > button.right");
   let modal = document.querySelector("body > div.modal-container");
   let modalClose = modal.querySelector(".modal-close");
+  let count = document.querySelectorAll("#thumbnails-list > li").length;
 
-  let max = 0;
-  let loop = function() { 
-    console.log("render page");
-    btnRight.click();
-    console.log("btn clicked");
-    if (modal.style.display === "block") {
-      console.log("last page reached");
-      modalClose.click();
-    }
-    else if (30 < max++) {
-      console.log("reached max count");
-    }
-    else {
-      setTimeout(loop, 5000);
-    }
+  let UI = function() { 
+    let ui = document.createElement("div");
+
+    ui.style.display = "block";
+    ui.style.width = "300px";
+    ui.style.height = "40px";
+    ui.style.backgroundColor = "lightgrey";
+    ui.style.position = "absolute";
+    ui.style.borderRadius = "20px";
+    ui.style.borderStyle = "solid";
+    ui.style.borderWidth = "4px";
+    ui.style.borderColor = "grey";
+    ui.style.overflow = "hidden";
+    let progress = document.createElement("div");
+    progress.style.display = "block";
+    progress.style.width = "0px";
+    progress.style.height = "40px";
+    progress.style.backgroundColor = "lightblue";
+    ui.appendChild(progress);
+
+    this.show = function() {
+      document.body.appendChild(ui);
+      ui.style.top = (window.innerHeight / 2 - 50) + "px";
+      ui.style.left = (window.innerWidth / 2 - 150) + "px";
+    };
+
+    this.hide = function() {
+      document.body.removeChild(ui);
+    };
+
+    // should be a value between 0 and 1
+    this.setProgress = function(value) { 
+      if (value < 0) value = 0;
+      if (value > 1) value = 1;
+      progress.style.width = Math.ceil(300 * value) + "px";
+    };
   };
 
-  loop();
+  let ui = new UI();
+  ui.show();
+  
+  let x = 0;
+  setInterval(function() { ui.setProgress(x++/100); }, 100);
+
+
+
+
+  // let max = 0;
+  // let loop = function() { 
+  //   console.log("render page");
+  //   btnRight.click();
+  //   console.log("btn clicked");
+  //   if (modal.style.display === "block") {
+  //     console.log("last page reached");
+  //     modalClose.click();
+  //   }
+  //   else if (30 < max++) {
+  //     console.log("reached max count");
+  //   }
+  //   else {
+  //     setTimeout(loop, 5000);
+  //   }
+  // };
+
+  // loop();
 
 })();
