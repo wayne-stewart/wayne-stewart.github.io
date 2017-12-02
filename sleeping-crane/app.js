@@ -54,6 +54,7 @@
     ui.style.height = "40px";
     ui.style.backgroundColor = "lightgrey";
     ui.style.position = "absolute";
+    ui.style.zIndex = 3000;
     ui.style.borderRadius = "20px";
     ui.style.borderStyle = "solid";
     ui.style.borderWidth = "4px";
@@ -86,7 +87,7 @@
 
   let ui = new UI();
   ui.show();
-  
+
   let x = 0;
   setInterval(function() { ui.setProgress(x++/100); }, 100);
 
