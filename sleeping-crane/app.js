@@ -1,5 +1,7 @@
 (function() {
 
+
+
   let renderPage = function() { 
     let divView = document.querySelector("#reader > #mask > .view");
     if (divView != null) {
@@ -66,6 +68,12 @@
     progress.style.height = "40px";
     progress.style.backgroundColor = "lightblue";
     ui.appendChild(progress);
+    let label = document.createElement("label");
+    label.style.position = "absolute";
+    label.innerHTML = "Click to Cancel";
+    label.style.left = (ui.clientWidth / 2 - label.clientWidth / 2) + "px";
+    label.style.top = (ui.clientHeight / 2 - label.clientHeight / 2) + "px";
+    ui.appendChild(label);
 
     this.show = function() {
       document.body.appendChild(ui);
@@ -83,15 +91,22 @@
       if (value > 1) value = 1;
       progress.style.width = Math.ceil(300 * value) + "px";
     };
+
+    this.onclick = function(fn) { 
+      ui.addEventListener("click", fn);
+    };
   };
 
   let ui = new UI();
   ui.show();
 
   let x = 0;
-  setInterval(function() { ui.setProgress(x++/100); }, 100);
+  var interval = setInterval(function() { ui.setProgress(x++/100); }, 100);
 
-
+ui.onclick(function(){
+  clearInterval(interval);
+  ui.hide();
+});
 
 
   // let max = 0;
