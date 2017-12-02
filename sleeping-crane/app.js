@@ -42,6 +42,16 @@
 
   //console.log(renderPage());
   var btnRight = document.querySelector("body > button.right");
-  btnRight.click();
+  var modal = document.querySelector("body > div.modal-container");
+  var modalClose = modal.querySelector(".modal-close");
+  while(true) {
+    console.log("render page");
+    btnRight.click();
+    console.log("button clicked");
+    if (modal.style.display === "block") {
+      console.log("last page reached");
+      modalClose.click();
+    }
+  }
 
 })();
