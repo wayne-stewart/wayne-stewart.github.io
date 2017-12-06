@@ -48,4 +48,4 @@
             ui.addEventListener("click", fn);
         };
     };
-})(SleepingCrane || (SleepingCrane = new Object()));
+})(window.SleepingCrane || (window.SleepingCrane = new Object()));

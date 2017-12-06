@@ -26,7 +26,7 @@
     };
 
     load("https://wayne-stewart.github.io/sleeping-crane/lib/blob.js");
-    load("https://wayne-stewart.github.io/sleeping-crane/lib/canvas-to-blob.js");
+    //load("https://wayne-stewart.github.io/sleeping-crane/lib/canvas-to-blob.js");
     load("https://wayne-stewart.github.io/sleeping-crane/lib/filesaver.min.js");
     load("https://wayne-stewart.github.io/sleeping-crane/lib/jspdf.min.js");
     load("https://wayne-stewart.github.io/sleeping-crane/lib/jszip.min.js");
