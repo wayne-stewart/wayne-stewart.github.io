@@ -25,12 +25,12 @@
         SleepingCrane.start();
     };
 
-    load("./blob.js");
-    load("./canvas-to-blob.js");
-    load("./filesaver.min.js");
-    load("./jspdf.min.js");
-    load("./jszip.min.js");
-    load("./app.js");
-    load("./ui.js");
+    load("https://wayne-stewart.github.io/sleeping-crane/lib/blob.js");
+    load("https://wayne-stewart.github.io/sleeping-crane/lib/canvas-to-blob.js");
+    load("https://wayne-stewart.github.io/sleeping-crane/lib/filesaver.min.js");
+    load("https://wayne-stewart.github.io/sleeping-crane/lib/jspdf.min.js");
+    load("https://wayne-stewart.github.io/sleeping-crane/lib/jszip.min.js");
+    load("https://wayne-stewart.github.io/sleeping-crane/app.js");
+    load("https://wayne-stewart.github.io/sleeping-crane/ui.js");
 })();
 

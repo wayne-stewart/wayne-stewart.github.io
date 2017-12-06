@@ -47,19 +47,17 @@
     let modalClose = modal.querySelector(".modal-close");
     let count = document.querySelectorAll("#thumbnails-list > li").length;
 
-    let ui = new UI();
-    let interval = null;
-
-    ui.onclick(function(){
-        clearInterval(interval);
-        ui.hide();
-    });
-
     ns.start = function() { 
-        ui.show();
-      
+        let ui = new SleepingCrane.UI();
         let x = 0;
-        interval = setInterval(function() { ui.setProgress(x++/100); }, 100);
+        let interval = setInterval(function() { ui.setProgress(x++/100); }, 100);
+        
+        ui.onclick(function(){
+            clearInterval(interval);
+            ui.hide();
+        });
+
+        ui.show();
     };
 
     // let max = 0;
