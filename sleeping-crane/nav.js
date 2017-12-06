@@ -5,9 +5,12 @@
         let modal = document.querySelector("body > div.modal-container");
         let modalClose = modal.querySelector(".modal-close");
         let thumbnails = document.querySelectorAll("#thumbnails-list > li");
+        let browse = document.getElementById("browse-btn");
 
         this.goToFirstPage = function() {
-            thumbnails[0].querySelector("figure").click();
+            browse.click();
+            setTimeout(function(){ thumbnails[0].querySelector("figure").click(); }, 1);
+            
         };
     };
 
