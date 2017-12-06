@@ -7,7 +7,7 @@
         let thumbnails = document.querySelectorAll("#thumbnails-list > li");
 
         this.goToFirstPage = function() {
-            thumbnails[0].click();
+            thumbnails[0].querySelector("figure").click();
         };
     };
 
