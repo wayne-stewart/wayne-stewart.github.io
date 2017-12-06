@@ -54,7 +54,7 @@
         // });
 
         // ui.show();
-
+        console.log("start called");
         var nav = new SleepingCrane.Nav();
         nav.goToFirstPage();
     };
