@@ -42,22 +42,21 @@
     };
 
     //console.log(renderPage());
-    let btnRight = document.querySelector("body > button.right");
-    let modal = document.querySelector("body > div.modal-container");
-    let modalClose = modal.querySelector(".modal-close");
-    let count = document.querySelectorAll("#thumbnails-list > li").length;
 
     ns.start = function() { 
-        let ui = new SleepingCrane.UI();
-        let x = 0;
-        let interval = setInterval(function() { ui.setProgress(x++/100); }, 100);
+        // let ui = new SleepingCrane.UI();
+        // let x = 0;
+        // let interval = setInterval(function() { ui.setProgress(x++/100); }, 100);
         
-        ui.onclick(function(){
-            clearInterval(interval);
-            ui.hide();
-        });
+        // ui.onclick(function(){
+        //     clearInterval(interval);
+        //     ui.hide();
+        // });
 
-        ui.show();
+        // ui.show();
+
+        var nav = new SleepingCrane.Nav();
+        nav.goToFirstPage();
     };
 
     // let max = 0;

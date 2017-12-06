@@ -1,28 +1,17 @@
 (function(){
-    let loading = [];
+    let loading = 0;
     
     let load = function(src) { 
         let el = document.createElement("script");
         el.src = src + "?" + (new Date()).getTime();
-        loading.push(el);
+        loading++;
         el.onload = function() {
-            let i = loading.indexOf(el);
-            if (i === loading.length - 1) {
-                loading.pop();
-            } 
-            else {
-                loading[i] = loading[loading.length - 1];
-                loading.pop();
-            }
-            if (loading.length === 0) {
-                onLoaded();
+            loading--;
+            if (loading === 0) {
+                setTimeout(SleepingCrane.start,1);
             }
         };
         document.body.appendChild(el);
-    };
-
-    let onLoaded = function() { 
-        SleepingCrane.start();
     };
 
     load("https://wayne-stewart.github.io/sleeping-crane/lib/blob.js");
@@ -32,5 +21,6 @@
     load("https://wayne-stewart.github.io/sleeping-crane/lib/jszip.min.js");
     load("https://wayne-stewart.github.io/sleeping-crane/app.js");
     load("https://wayne-stewart.github.io/sleeping-crane/ui.js");
+    load("https://wayne-stewart.github.io/sleeping-crane/nav.js");
 })();
 
