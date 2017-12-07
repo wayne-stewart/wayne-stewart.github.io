@@ -4,11 +4,11 @@
         let btnRight = document.querySelector("body > button.right");
         let modal = document.querySelector("body > div.modal-container");
         let modalClose = modal.querySelector(".modal-close");
-        let thumbnails = document.querySelectorAll("#thumbnails-list > li");
-        let browse = document.getElementById("browse-btn");
+        
+        //let browse = document.getElementById("browse-btn");
 
         this.goToFirstPage = function() {
-            browse.click();
+            let thumbnails = document.querySelectorAll("#thumbnails-list > li");
             setTimeout(function(){ thumbnails[0].querySelector("figure").click(); }, 1);
             
         };
