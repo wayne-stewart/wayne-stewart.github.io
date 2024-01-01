@@ -1,0 +1,35 @@
+<html>
+    <head>
+        <title>Pong</title>
+        <link href="pong/site.css" rel="stylesheet">
+        <script type="x-shader/x-vertex" id="vertex-shader">
+            attribute vec2 position;
+            uniform vec2 scaling_factor;
+            uniform vec2 rotation_vector;
+            uniform vec2 translation_vector;
+            void main() {
+                vec2 rotated_position = vec2(
+                    position.x * rotation_vector.y + position.y * rotation_vector.x,
+                    position.y * rotation_vector.y - position.x * rotation_vector.x);
+                vec2 translated_position = rotated_position + translation_vector;
+                gl_Position = vec4(translated_position * scaling_factor, 0.0, 1.0);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="fragment-shader">
+            #ifdef GL_ES
+            precision highp float;
+            #endif
+
+            uniform vec4 color;
+
+            void main() {
+                gl_FragColor = color;
+            }
+        </script>
+        <script defer src="pong/site.js"></script>
+    </head>
+    <body>
+        <canvas>This Web Browser does not support &lt;Canvas&gt;</canvas>
+    </body>
+</html>
+
