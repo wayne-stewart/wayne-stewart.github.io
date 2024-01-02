@@ -32,6 +32,22 @@
         canvas.height = canvas.clientHeight;
     }
 
+    const key_handler = function(event) {
+        let key_pressed = event.type === "keydown";
+        switch(event.keyCode) {
+            case 38:
+                key_pressed_up_arrow = key_pressed;
+                break;
+            case 40:
+                key_pressed_down_arrow = key_pressed;
+                break;
+            case 27:
+                game_running = false;
+                clean_gl();
+                break;
+        }
+    }
+
     const draw = function() {
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0.8, 0.9, 1.0, 1.0);
@@ -168,33 +184,11 @@
         paddle_vertex_component_count = 2;
         paddle_vertex_count = paddle_vertex_array.length / paddle_vertex_component_count;
 
+        window.addEventListener("resize", resize_canvas);
+        window.addEventListener("keydown", key_handler);
+        window.addEventListener("keyup", key_handler);
+
         resize_canvas();
         game_loop();
-    });
-
-    window.addEventListener("resize", resize_canvas);
-    window.addEventListener("keydown", function(event) {
-        switch(event.keyCode) {
-            case 38:
-                key_pressed_up_arrow = true;
-                break;
-            case 40:
-                key_pressed_down_arrow = true;
-                break;
-        }
-    });
-    window.addEventListener("keyup", function(event) {
-        switch(event.keyCode) {
-            case 38:
-                key_pressed_up_arrow = false;
-                break;
-            case 40:
-                key_pressed_down_arrow = false;
-                break;
-            case 27:
-                game_running = false;
-                clean_gl();
-                break;
-        }
     });
 })();
