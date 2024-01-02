@@ -171,17 +171,27 @@
 
     window.addEventListener("resize", resize_canvas);
     window.addEventListener("keydown", function(event) {
-        if (event.keyCode === 38) {
-            key_pressed_up_arrow = true;
-        } else if (event.keyCode === 40) {
-            key_pressed_down_arrow = true;
+        switch(event.keyCode) {
+            case 38:
+                key_pressed_up_arrow = true;
+                break;
+            case 40:
+                key_pressed_down_arrow = true;
+                break;
         }
     });
     window.addEventListener("keyup", function(event) {
-        if (event.keyCode === 38) {
-            key_pressed_up_arrow = false;
-        } else if (event.keyCode === 40) {
-            key_pressed_down_arrow = false;
+        switch(event.keyCode) {
+            case 38:
+                key_pressed_up_arrow = false;
+                break;
+            case 40:
+                key_pressed_down_arrow = false;
+                break;
+            case 27:
+                game_running = false;
+                clean_gl();
+                break;
         }
     });
 })();
