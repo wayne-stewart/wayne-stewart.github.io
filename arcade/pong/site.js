@@ -2,8 +2,8 @@
 (function(){
     "use strict";
 
-    let canvas = document.querySelector("canvas");
-    let gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    let canvas;
+    let gl;
     let gl_program;
     let gl_buffer;
     let font_base = 1000;
@@ -139,6 +139,9 @@
     };
 
     window.addEventListener("load", function() {
+        canvas = document.querySelector("canvas");
+        gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+
         if (!gl) {
             show_webgl_init_error();
             return;
