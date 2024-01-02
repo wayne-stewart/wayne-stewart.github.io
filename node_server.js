@@ -6,14 +6,16 @@ const PORT = 8080;
 
 const default_paths = ["/index.html","/default.html","/game.html"];
 
-const send_404 = function(response) { 
+const send_404 = function(request, response) { 
 	response.writeHead(404, {"Content-Type":"text/html"});
 	response.end("error: 404 - file not found");
+    console.log(`404 ${request.url}`);
 };
 
-const send_302 = function(response, url) { 
+const send_302 = function(request, response, url) { 
 	response.writeHead(302, {"Location":url});
 	response.end();
+    console.log(`302 ${request.url} -> ${url}`);
 };
 
 const join_path = function(base, path) {
@@ -43,36 +45,37 @@ const find_default_path = function(base_path, callback) {
 	recurse(0);
 };
 
-const load_file = function(path, callback) {
-
-};
-
 const handle_request = function(request, response) {
-    console.log(request.url);
 	let path = join_path(__dirname, request.url);
     fs.readFile(path, function(error, data){
 		if (error) { 
 			if (error.code === 'EISDIR') {
-				find_default_path(path, function(def_path) {
-					if (def_path === null) { 
-						send_404(response);
-					} else {
-                        path = join_path(path, def_path);
-                        fs.readFile(path, function(error, data) {
-                            if (error) {
-                                send_404(response);
-                            } else {
-                                response.end(data);
-                            }
-                        });
-					}
-				});
+                if (!path.endsWith("/")) {
+                    send_302(request, response, request.url + "/");
+                } else {
+                    find_default_path(path, function(def_path) {
+                        if (def_path === null) { 
+                            send_404(request, response);
+                        } else {
+                            path = join_path(path, def_path);
+                            fs.readFile(path, function(error, data) {
+                                if (error) {
+                                    send_404(request, response);
+                                } else {
+                                    console.log(`200 ${request.url}`);
+                                    response.end(data);
+                                }
+                            });
+                        }
+                    });
+                }
 			}
 			else {
-				send_404(response);
+				send_404(request, response);
 			}
 		}
 		else {
+            console.log(`200 ${request.url}`);
 			response.end(data);
 		}
     });
