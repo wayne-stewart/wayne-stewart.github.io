@@ -1,3 +1,10 @@
+/**************************************************************************
+ * This server should only be used for development
+ * It is not hardened for production use.
+ *
+ * Run: 
+ * node server.js
+ *************************************************************************/
 
 var http = require("http");
 var fs = require("fs");
