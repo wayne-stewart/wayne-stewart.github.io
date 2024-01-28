@@ -30,6 +30,9 @@ typedef enum HttpContentTypes {
 	CONTENT_TYPE_JS,
 	CONTENT_TYPE_JPG,
 	CONTENT_TYPE_PNG,
+	CONTENT_TYPE_GIF,
+	CONTENT_TYPE_ICO,
+	CONTENT_TYPE_SVG,
 } HttpContentTypes;
 
 typedef struct HttpResponse {
@@ -85,16 +88,23 @@ const HttpContentType CONTENT_TYPES[] = {
 	{ CONTENT_TYPE_JS,		".js",		"text/javascript" },
 	{ CONTENT_TYPE_JPG,		".jpg",		"image/jpeg" },
 	{ CONTENT_TYPE_PNG,		".png",		"image/png" },
+	{ CONTENT_TYPE_GIF,		".gif",		"image/gif" },
+	{ CONTENT_TYPE_ICO,		".ico",		"image/x-icon" },
+	{ CONTENT_TYPE_SVG,		".svg",		"image/svg+xml" },
 };
 
-HttpContentTypes GetHttpContentTypeFromFileExtension(const char* file_extension)
+void SetHttpContentTypeFromFilePath(PHttpRequest request, const char* path_buffer, int path_length)
 {
-	for (int i = 0; i < ARRAY_SIZE(CONTENT_TYPES); i++) {
-		if (strcmp(file_extension, CONTENT_TYPES[i].file_extension) == 0) {
-			return CONTENT_TYPES[i].type_id;
+	for(int i = 0; i < ARRAY_SIZE(CONTENT_TYPES); i++) {
+		int file_ext_len = strlen(CONTENT_TYPES[i].file_extension);
+		if (path_length > file_ext_len) {
+			if (strcmp(CONTENT_TYPES[i].file_extension, &path_buffer[path_length - file_ext_len]) == 0) {
+				request->response.content_type = CONTENT_TYPES[i].type_id;
+				return;
+			}
 		}
 	}
-	return CONTENT_TYPE_PLAIN;
+	request->response.content_type = CONTENT_TYPE_PLAIN;
 }
 
 const char* GetHttpContentTypeText(HttpContentTypes type_id)
@@ -209,20 +219,20 @@ int try_open_file_or_default(PHttpRequest request) {
 	int uri_length = strlen(request->uri);
 	// -1 to always leave a terminating 0 at the end
 	int buffer_length = ARRAY_SIZE(path_buffer) - 1;
-	int write_length = 0;
+	int path_length = 0;
 
 	// if the final character is a slash try to open
 	// the default index.html file in the directory
 	// we know from the regex uri validation that the first
 	// character will always be a slash
 	if (request->uri[uri_length - 1] == '/') {
-		write_length = snprintf(path_buffer, buffer_length, ".%sindex.html", request->uri);
+		path_length = snprintf(path_buffer, buffer_length, ".%sindex.html", request->uri);
 	} else {
-		write_length = snprintf(path_buffer, buffer_length, ".%s", request->uri);
+		path_length = snprintf(path_buffer, buffer_length, ".%s", request->uri);
 	}
 
 	// path was greater than the buffer so return error
-	if (write_length == buffer_length) return 0;
+	if (path_length == buffer_length) return 0;
 
 	// tolower all characters in the path
 	// all served files should be lower case
@@ -236,27 +246,10 @@ int try_open_file_or_default(PHttpRequest request) {
 
 	// path found, open for reading and return the file descriptor
 	if (S_ISREG(stat_buffer.st_mode)) {
+		SetHttpContentTypeFromFilePath(request, path_buffer, path_length);
 		return open(path_buffer, O_RDONLY);
 	}
 	
-	// path is a directory, see if the default index.html exists
-	/*if (S_ISDIR(stat_buffer.st_mode)) {
-		int available_buffer_space = buffer_length - write_length;
-
-		// not enough space in buffer to append /index.html
-		if (available_buffer_space < 12) return -1;
-
-		snprintf(path_buffer+write_length, 12, "/index.html");
-
-		// path could not be found so return error
-		if (lstat(path_buffer, &stat_buffer) != 0) return -1;
-
-		// path found, open for reading and return the file descriptor
-		if (S_ISREG(stat_buffer.st_mode)) {
-			return open(path_buffer, O_RDONLY);
-		}
-	}*/
-
 	// path is a directory but it did not end in a '/'
 	// send back a code to inform the the caller a 302
 	// should be generated with the / at the end.
@@ -266,6 +259,29 @@ int try_open_file_or_default(PHttpRequest request) {
 
 	// no path could be found so return error
 	return -1;
+}
+
+void serve_static_file(PHttpRequest request)
+{
+	int file_fd = try_open_file_or_default(request);
+	if (file_fd == -1) { 
+		send_404(request);
+	}
+	if (file_fd == -2) {
+		char path_302[1024] = {0};
+		snprintf(path_302, ARRAY_SIZE(path_302) - 1, "%s/", request->uri);
+		send_302(request, path_302);
+	}
+	else {
+		struct stat file_stat;
+		fstat(file_fd, &file_stat);
+		off_t file_size = file_stat.st_size;
+		request->response.status_code = 200;
+		request->response.content_length = file_size;
+		send_header(request);
+		send_file(request->client_fd, file_fd);
+		close(file_fd);
+	}
 }
 
 int main(int argc, char **argv)
@@ -309,27 +325,7 @@ int main(int argc, char **argv)
 		char read_buffer[BUFFER_SIZE] = {0};
 		if (read_request(&regx, &request, read_buffer, BUFFER_SIZE - 1) != 1) goto CLEANUP;
 
-		
-		int file_fd = try_open_file_or_default(&request);
-		if (file_fd == -1) { 
-			send_404(&request);
-		}
-		if (file_fd == -2) {
-			char path_302[1024] = {0};
-			snprintf(path_302, ARRAY_SIZE(path_302) - 1, "%s/", request.uri);
-			send_302(&request, path_302);
-		}
-		else {
-			struct stat file_stat;
-			fstat(file_fd, &file_stat);
-			off_t file_size = file_stat.st_size;
-			request.response.status_code = 200;
-			request.response.content_length = file_size;
-			request.response.content_type = CONTENT_TYPE_HTML;
-			send_header(&request);
-			send_file(request.client_fd, file_fd);
-			close(file_fd);
-		}
+		serve_static_file(&request);
 
 		CLEANUP:
 		if (request.uri) {
@@ -344,9 +340,7 @@ int main(int argc, char **argv)
 	}
 
 
-
-
-
+	close(server_fd);
 
 	return 0;
 }
