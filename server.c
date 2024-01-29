@@ -126,6 +126,7 @@ void send_header(PHttpRequest request)
 			"HTTP/1.1 %d %s\r\n"
 			"Content-Type: %s\r\n"
 			"Content-Length: %d\r\n"
+			//"Connection: keep-alive\r\n"
 			"\r\n",
 		request->response.status_code, 
 		GetHttpStatusCodeMessage(request->response.status_code),
@@ -326,7 +327,7 @@ int main(int argc, char **argv)
 		if (read_request(&regx, &request, read_buffer, BUFFER_SIZE - 1) != 1) goto CLEANUP;
 
 		serve_static_file(&request);
-
+		
 		CLEANUP:
 		if (request.uri) {
 			printf("%d %s %s\n", request.response.status_code, request.method, request.uri);
