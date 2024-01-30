@@ -15,10 +15,13 @@
     let p2_paddle = 0.0;
     let ball_x = 0.0;
     let ball_y = 0.0;
+    let vertex_component_count = 2;
     let paddle_vertex_array;
     let paddle_vertex_buffer;
-    let paddle_vertex_component_count = 2;
     let paddle_vertex_count;
+	let frame_vertex_array;
+	let frame_vertex_buffer;
+	let frame_vertex_count;
     let current_rotation = [0,1];
     let current_scale = [1.0, 1.0];
     let current_translation = [0.0, 0.0];
@@ -50,22 +53,12 @@
 
     const draw = function() {
         gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.clearColor(0.8, 0.9, 1.0, 1.0);
+        gl.clearColor(0.05, 0.05, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         let aspect_ratio = canvas.width / canvas.height;
         current_scale[1] = aspect_ratio;
 
-        current_translation[0] = -0.9;
-        current_translation[1] = p1_paddle;
-        draw_paddle();
-
-        current_translation[0] = 0.9;
-        current_translation[1] = p2_paddle;
-        draw_paddle();
-    };
-
-    const draw_paddle = function() {
         gl.useProgram(gl_program);
         let scaling_factor = gl.getUniformLocation(gl_program, "scaling_factor");
         let color = gl.getUniformLocation(gl_program, "color");
@@ -74,11 +67,33 @@
         let position = gl.getAttribLocation(gl_program, "position");
         gl.uniform2fv(scaling_factor, current_scale);
         gl.uniform2fv(rotation_vector, current_rotation);
+        gl.uniform4fv(color, [0.9, 0.9, 0.9, 1.0]);
+        
+		// frame
+		current_translation[0] = 0.0;
+		current_translation[0] = 0.0;
+		gl.uniform2fv(translation_vector, current_translation);
+		gl.bindBuffer(gl.ARRAY_BUFFER, frame_vertex_buffer);
+		gl.enableVertexAttribArray(position);
+		gl.vertexAttribPointer(position, vertex_component_count, gl.FLOAT, false, 0, 0);
+		gl.drawArrays(gl.TRIANGLES, 0, frame_vertex_count);
+
+		// left paddle
+		current_translation[0] = -0.9;
+        current_translation[1] = p1_paddle;
         gl.uniform2fv(translation_vector, current_translation);
-        gl.uniform4fv(color, [0.1, 0.7, 0.2, 1.0]);
         gl.bindBuffer(gl.ARRAY_BUFFER, paddle_vertex_buffer);
         gl.enableVertexAttribArray(position);
-        gl.vertexAttribPointer(position, paddle_vertex_component_count, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(position, vertex_component_count, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.TRIANGLES, 0, paddle_vertex_count);
+
+		// right paddle
+        current_translation[0] = 0.9;
+        current_translation[1] = p2_paddle;
+        gl.uniform2fv(translation_vector, current_translation);
+        gl.bindBuffer(gl.ARRAY_BUFFER, paddle_vertex_buffer);
+        gl.enableVertexAttribArray(position);
+        gl.vertexAttribPointer(position, vertex_component_count, gl.FLOAT, false, 0, 0);
         gl.drawArrays(gl.TRIANGLES, 0, paddle_vertex_count);
     };
 
@@ -154,6 +169,29 @@
         return program;
     };
 
+	const push_rect_triangles = function(array, x, y, w, h) {
+		array.push(x);
+		array.push(y);
+		array.push(x+w);
+		array.push(y);
+		array.push(x+w);
+		array.push(y-h);
+
+		array.push(x);
+		array.push(y);
+		array.push(x+w);
+		array.push(y-h);
+		array.push(x);
+		array.push(y-h);
+	};
+
+	const push_border_triangles = function(array, x, y, w, h, t) {
+		push_rect_triangles(array, x, y, w, t);
+		push_rect_triangles(array, x + w - t, y - t, t, h - t -t);
+		push_rect_triangles(array, x, y - h + t, w, t);
+		push_rect_triangles(array, x, y - t, t, h - t -t);
+	};
+
     window.addEventListener("load", function() {
         canvas = document.querySelector("canvas");
         gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
@@ -170,19 +208,26 @@
         let fragment_shader = compile_shader(source, gl.FRAGMENT_SHADER);
         gl_program = create_program([vertex_shader, fragment_shader]);
 
-        // init paddel vertex buffer
+		// all vertexes have two components since this is all 2D
+        vertex_component_count = 2;
+        
+		// init paddel vertex buffer
         paddle_vertex_array = new Float32Array([
-            -0.025, 0.1,
-            0.025, 0.1,
-            0.025, -0.1,
-            -0.025, 0.1,
-            0.025, -0.1,
-            -0.025, -0.1]);
+            -0.025, 0.1,	0.025, 0.1,		0.025, -0.1,
+			-0.025, 0.1,	0.025, -0.1,	-0.025, -0.1
+		]);
         paddle_vertex_buffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, paddle_vertex_buffer);
         gl.bufferData(gl.ARRAY_BUFFER, paddle_vertex_array, gl.STATIC_DRAW);
-        paddle_vertex_component_count = 2;
-        paddle_vertex_count = paddle_vertex_array.length / paddle_vertex_component_count;
+        paddle_vertex_count = paddle_vertex_array.length / vertex_component_count;
+
+		let temp_array = [];
+		push_border_triangles(temp_array, -1.0, 0.75, 2.0, 1.5, 0.05);
+		frame_vertex_array = new Float32Array(temp_array);
+		frame_vertex_buffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, frame_vertex_buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, frame_vertex_array, gl.STATIC_DRAW);
+		frame_vertex_count = frame_vertex_array.length / vertex_component_count;
 
         window.addEventListener("resize", resize_canvas);
         window.addEventListener("keydown", key_handler);
