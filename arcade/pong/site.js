@@ -56,8 +56,16 @@
         gl.clearColor(0.05, 0.05, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        let aspect_ratio = canvas.width / canvas.height;
-        current_scale[1] = aspect_ratio;
+		let arena_aspect_ratio = 2.0 / 1.5;
+        let canvas_aspect_ratio = canvas.width / canvas.height;
+		//console.log(canvas_aspect_ratio);
+		if (arena_aspect_ratio >  canvas_aspect_ratio) {
+        	current_scale[1] = canvas_aspect_ratio;
+			current_scale[0] = 1.0;
+		} else {
+        	current_scale[0] = 1/canvas_aspect_ratio * arena_aspect_ratio;
+			current_scale[1] = 1.0 * arena_aspect_ratio;
+		}
 
         gl.useProgram(gl_program);
         let scaling_factor = gl.getUniformLocation(gl_program, "scaling_factor");
