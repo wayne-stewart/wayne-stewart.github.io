@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>js-fractal</title>
+	
+	<link href="css/colpick.css" rel="stylesheet"></link>
+	<link href="css/style.css" rel="stylesheet"></link>
+	
+	<script data-main="js/app.js" src="js/require.js"></script>
+</head>
+<body>
+	<canvas id="fractalCanvas"></canvas>
+	<div id="mainmenu">
+		<ul>
+			<li>
+				<a id="fractalRender">Render</a>
+				|
+				<select id="typeSelect"></select>
+				<select id="presetSelect"></select>
+				|
+				<span id="mousePosition"></span>
+			</li>
+			<li id="settingsMenu">
+				<label>iterations:</label>
+				<input type="number" id="iterations" value="256" step="64" />
+				<label>factor:</label>
+				<input type="number" id="factor" value="1.5" step="0.01" />
+				<label>constant:</label>
+				<input type="number" id="constant_a" value="0" step="0.001" />
+				+
+				<input type="number" id="constant_b" value="0" step="0.001" />
+				i
+			</li>
+			<li id="dimensionMenu">
+				<label>rect x:</label>
+				<input type="number" id="rect_x" value="1" step="1" />
+				<label>rect y:</label>
+				<input type="number" id="rect_y" value="0" step="1" />
+				<label>rect w:</label>
+				<input type="number" id="rect_w" value="0" step="1" />
+				<label>rect h:</label>
+				<input type="number" id="rect_h" value="0" step="1" />
+			</li>
+			<li id="transformMenu">
+				<label>rotate: &deg</label>
+				<input type="number" id="rotate" value="0" step="15" />
+			</li>
+		</ul>
+	</div>
+</body>
+</html>

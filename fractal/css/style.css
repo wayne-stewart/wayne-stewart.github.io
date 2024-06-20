@@ -1,0 +1,20 @@
+
+* { padding:0px; margin:0px; }
+
+#fractalCanvas { width:100%; height:100%; position:absolute; }
+
+#mainmenu { position:fixed; background-color:#C5C5C5; font-size:1.2em; padding-top:0.2em; padding-bottom:0.2em; padding-left:0.2em; width:100%; color:#858585 }
+/*#mainmenu ul { display: inline-block; margin-left:0.2em; margin-right:0.2em; }
+#mainmenu li { display:inline; }*/
+#mainmenu a { text-decoration:none; cursor:pointer; }
+#mainmenu a:hover { color:#DDDDDD; }
+#mainmenu .selected { color:#FFFFFF; }
+#mainmenu .selected:hover { color:#FFFFFF; }
+#mainmenu input[type=number] { width:4em; }
+/*#mainmenu #transformMenu input[type=number] { width:8em; }*/
+/*#liGraphPoint { float:right; }
+#liGraphPoint label { margin-right:0.5em; }*/
+#mainmenu label { width:4.7em; display:inline-block; }
+#mainmenu select { width:10em; }
+
+.hidden { display: none !important; }

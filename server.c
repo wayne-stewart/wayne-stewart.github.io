@@ -265,6 +265,7 @@ int try_open_file_or_default(PHttpRequest request) {
 void serve_static_file(PHttpRequest request)
 {
 	int file_fd = try_open_file_or_default(request);
+	
 	if (file_fd == -1) { 
 		send_404(request);
 	}
