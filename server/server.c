@@ -33,6 +33,7 @@ typedef enum HttpContentTypes {
 	CONTENT_TYPE_GIF,
 	CONTENT_TYPE_ICO,
 	CONTENT_TYPE_SVG,
+	CONTENT_TYPE_WASM
 } HttpContentTypes;
 
 typedef struct HttpResponse {
@@ -91,6 +92,7 @@ const HttpContentType CONTENT_TYPES[] = {
 	{ CONTENT_TYPE_GIF,		".gif",		"image/gif" },
 	{ CONTENT_TYPE_ICO,		".ico",		"image/x-icon" },
 	{ CONTENT_TYPE_SVG,		".svg",		"image/svg+xml" },
+	{ CONTENT_TYPE_WASM,	".wasm",	"application/wasm" }
 };
 
 void SetHttpContentTypeFromFilePath(PHttpRequest request, const char* path_buffer, int path_length)
@@ -227,9 +229,9 @@ int try_open_file_or_default(PHttpRequest request) {
 	// we know from the regex uri validation that the first
 	// character will always be a slash
 	if (request->uri[uri_length - 1] == '/') {
-		path_length = snprintf(path_buffer, buffer_length, ".%sindex.html", request->uri);
+		path_length = snprintf(path_buffer, buffer_length, "..%sindex.html", request->uri);
 	} else {
-		path_length = snprintf(path_buffer, buffer_length, ".%s", request->uri);
+		path_length = snprintf(path_buffer, buffer_length, "..%s", request->uri);
 	}
 
 	// path was greater than the buffer so return error
