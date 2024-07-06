@@ -175,20 +175,13 @@ void send_302(PHttpRequest request, const char* path)
 	send(request->client_fd, buffer, header_length, 0);
 }
 
-typedef struct Regex {
+typedef struct CompiledRegex {
 	regex_t request_line;
 	regex_t uri_double_dots;
 	regex_t uri_valid_chars;
-} Regex, *PRegex;
+} CompiledRegex;
 
-void make_regex(PRegex regx)
-{	
-	regcomp(&regx->request_line, "^([A-Z]+) (/[^ ]*) HTTP/1.1\r\n", REG_EXTENDED);
-	regcomp(&regx->uri_double_dots, "\\.\\.", REG_EXTENDED);
-	regcomp(&regx->uri_valid_chars, "^[0-9a-zA-Z/_\\.-]+$", REG_EXTENDED);
-}
-
-int read_request(PRegex regx, PHttpRequest request, char* buffer, int buffer_size)
+int read_request(CompiledRegex* regx, PHttpRequest request, char* buffer, int buffer_size)
 {
 	size_t bytes_received = recv(request->client_fd, buffer, buffer_size, 0);
 	if (bytes_received == 0) { perror("failed to read from network stream"); return 0; }
@@ -229,9 +222,9 @@ int try_open_file_or_default(PHttpRequest request) {
 	// we know from the regex uri validation that the first
 	// character will always be a slash
 	if (request->uri[uri_length - 1] == '/') {
-		path_length = snprintf(path_buffer, buffer_length, "..%sindex.html", request->uri);
+		path_length = snprintf(path_buffer, buffer_length, ".%sindex.html", request->uri);
 	} else {
-		path_length = snprintf(path_buffer, buffer_length, "..%s", request->uri);
+		path_length = snprintf(path_buffer, buffer_length, ".%s", request->uri);
 	}
 
 	// path was greater than the buffer so return error
@@ -288,48 +281,81 @@ void serve_static_file(PHttpRequest request)
 	}
 }
 
-int main(int argc, char **argv)
-{
+typedef struct MiddlewareHandler MiddlewareHandler;
+typedef struct ServerState ServerState;
+
+typedef struct MiddlewareHandler {
+	struct MiddlewareHandler* next;
+	void (*run)(ServerState*, HttpRequest*, MiddlewareHandler*);
+} MiddlewareHandler;
+
+typedef struct ServerState {
 	int server_fd;
+	CompiledRegex regex;
+	MiddlewareHandler* middleware;
+} ServerState;
+
+void Server_Init(ServerState* state) {
+	regcomp(&state->regex.request_line, "^([A-Z]+) (/[^ ]*) HTTP/1.1\r\n", REG_EXTENDED);
+	regcomp(&state->regex.uri_double_dots, "\\.\\.", REG_EXTENDED);
+	regcomp(&state->regex.uri_valid_chars, "^[0-9a-zA-Z/_\\.-]+$", REG_EXTENDED);
+}
+
+void Server_Destroy(ServerState* state) {
+	if (state->server_fd) {
+		close(state->server_fd);
+	}
+}
+
+void Server_AddMiddleware(ServerState* state, MiddlewareHandler* handler) {
+	if (state->middleware) {
+		MiddlewareHandler* parent = state->middleware;
+		while (parent->next) parent = parent->next;
+		parent->next =  handler;
+	} else {
+		state->middleware = handler;
+	}
+}
+
+void Server_Run(ServerState* state) {
 	struct sockaddr_in server_addr = {0};
 
-	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+	if ((state->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("create socket failed");
-		return 1;
+		return;
 	}
 
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 	server_addr.sin_port = htons(PORT);
 
-	if (bind(server_fd,
+	if (bind(state->server_fd,
 		(struct sockaddr *)&server_addr,
 		sizeof(server_addr)) < 0) {
 		perror("socket bind failed");
-		return 1;
+		return;
 	}
 
-	if (listen(server_fd, 10) < 0) {
+	if (listen(state->server_fd, 10) < 0) {
 		perror("listening to socket failed");
-		return 1;
+		return;
 	}
 	printf("listening on port: %d\n", PORT);
-
-	Regex regx = {0};
-	make_regex(&regx);
 
 	while(1) {
 		struct sockaddr_in client_addr = {0};
 		socklen_t client_addr_len = sizeof(client_addr);
 
 		HttpRequest request = {0};
-		request.client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_addr_len);
+		request.client_fd = accept(state->server_fd, (struct sockaddr*)&client_addr, &client_addr_len);
 		if (request.client_fd < 0) { perror("accept failed"); goto CLEANUP; }
 		
 		char read_buffer[BUFFER_SIZE] = {0};
-		if (read_request(&regx, &request, read_buffer, BUFFER_SIZE - 1) != 1) goto CLEANUP;
+		if (read_request(&state->regex, &request, read_buffer, BUFFER_SIZE - 1) != 1) goto CLEANUP;
+		
+		printf("%s\n", request.uri);
 
-		serve_static_file(&request);
+		state->middleware->run(state, &request, state->middleware->next);
 		
 		CLEANUP:
 		if (request.uri) {
@@ -342,9 +368,51 @@ int main(int argc, char **argv)
 			close(request.client_fd);
 		}
 	}
+}
 
+void ErrorHandler(ServerState* state, HttpRequest* request, MiddlewareHandler* next) {
+	if (next) {
+		next->run(state, request, next->next);
+		if (request->response.status_code >= 400) {
+			// send pretty error page
+		}
+	}
+	if (request->response.status_code == 0) {
+		// send an error about no handler found
+	}
+}
 
-	close(server_fd);
+/*
+	StaticFileHandler
+	Run the next middleware in the chain if it exists.
+	If no middleware handled the request ( status_code == 0 ),
+	then try to look for a file to send as the response.
 
+	TODO: try caching the file so we don't have to stream from disk
+		  as often.
+*/
+void StaticFileHandler(ServerState* state, HttpRequest* request, MiddlewareHandler* next) {
+	if (next) {
+		next->run(state, request, next->next);
+	}
+	if (request->response.status_code == 0) {
+		serve_static_file(request);		
+	}
+}
+
+int main(int argc, char **argv)
+{
+	ServerState state = {0};
+	Server_Init(&state);
+
+	MiddlewareHandler error_handler = { .run = ErrorHandler };
+	Server_AddMiddleware(&state, &error_handler);
+
+	MiddlewareHandler static_file_handler = { .run = StaticFileHandler };
+	Server_AddMiddleware(&state, &static_file_handler);
+
+	Server_Run(&state);
+	Server_Destroy(&state);
+	
 	return 0;
 }
