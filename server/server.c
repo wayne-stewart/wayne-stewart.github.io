@@ -1,40 +1,6 @@
-/***********************************************
- * Not for production
- * This web server is intended for development
- * and experimentation.
- *
- * Build and Run
- * gcc server.c & ./a.out
- ***********************************************/
-
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <regex.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <ctype.h>
-
-#define PORT 8080
-#define BUFFER_SIZE 4096
-
-#define ARRAY_SIZE(array_name) (sizeof(array_name) / sizeof(array_name[0]))
-
-typedef enum HttpContentTypes {
-	CONTENT_TYPE_PLAIN,
-	CONTENT_TYPE_HTML,
-	CONTENT_TYPE_CSS,
-	CONTENT_TYPE_JS,
-	CONTENT_TYPE_JPG,
-	CONTENT_TYPE_PNG,
-	CONTENT_TYPE_GIF,
-	CONTENT_TYPE_ICO,
-	CONTENT_TYPE_SVG,
-	CONTENT_TYPE_WASM
-} HttpContentTypes;
+/*
+	Server
+*/
 
 typedef struct HttpResponse {
 	int status_code;
@@ -50,74 +16,25 @@ typedef struct HttpRequest {
 	HttpResponse response;
 } HttpRequest, *PHttpRequest;
 
-typedef struct HttpStatusCode {
-	int status_code;
-	const char* status_message;
-} HttpStatusCode;
+typedef struct CompiledRegex {
+	regex_t request_line;
+	regex_t uri_double_dots;
+	regex_t uri_valid_chars;
+} CompiledRegex;
 
-const HttpStatusCode STATUS_CODES[] = {
-	{ 200, "Ok" },
-	{ 302, "Found" },
-	{ 400, "Bad Request" },
-	{ 401, "Unauthorized" },
-	{ 403, "Forbidden" },
-	{ 404, "Not Found" },
-	{ 405, "Method Not Allowed" },
-	{ 500, "Internal Server Error" }
-};
+typedef struct MiddlewareHandler MiddlewareHandler;
+typedef struct ServerState ServerState;
 
-const char* GetHttpStatusCodeMessage(int status_code)
-{
-	for(int i = 0; i < ARRAY_SIZE(STATUS_CODES); i++) {
-		if (STATUS_CODES[i].status_code == status_code) {
-			return STATUS_CODES[i].status_message;
-		}
-	}
-	return "Message Not Available";
-}
+typedef struct MiddlewareHandler {
+	struct MiddlewareHandler* next;
+	void (*run)(ServerState*, HttpRequest*, MiddlewareHandler*);
+} MiddlewareHandler;
 
-typedef struct HttpContentType {
-	HttpContentTypes type_id;
-	const char* file_extension;
-	const char* text;
-} HttpContentType;
-
-const HttpContentType CONTENT_TYPES[] = {
-	{ CONTENT_TYPE_PLAIN,	".txt",		"text/plain" },
-	{ CONTENT_TYPE_HTML,	".html",	"text/html" },
-	{ CONTENT_TYPE_CSS,		".css",		"text/css" },
-	{ CONTENT_TYPE_JS,		".js",		"text/javascript" },
-	{ CONTENT_TYPE_JPG,		".jpg",		"image/jpeg" },
-	{ CONTENT_TYPE_PNG,		".png",		"image/png" },
-	{ CONTENT_TYPE_GIF,		".gif",		"image/gif" },
-	{ CONTENT_TYPE_ICO,		".ico",		"image/x-icon" },
-	{ CONTENT_TYPE_SVG,		".svg",		"image/svg+xml" },
-	{ CONTENT_TYPE_WASM,	".wasm",	"application/wasm" }
-};
-
-void SetHttpContentTypeFromFilePath(PHttpRequest request, const char* path_buffer, int path_length)
-{
-	for(int i = 0; i < ARRAY_SIZE(CONTENT_TYPES); i++) {
-		int file_ext_len = strlen(CONTENT_TYPES[i].file_extension);
-		if (path_length > file_ext_len) {
-			if (strcmp(CONTENT_TYPES[i].file_extension, &path_buffer[path_length - file_ext_len]) == 0) {
-				request->response.content_type = CONTENT_TYPES[i].type_id;
-				return;
-			}
-		}
-	}
-	request->response.content_type = CONTENT_TYPE_PLAIN;
-}
-
-const char* GetHttpContentTypeText(HttpContentTypes type_id)
-{
-	for (int i = 0; i < ARRAY_SIZE(CONTENT_TYPES); i++) {
-		if (CONTENT_TYPES[i].type_id == type_id) {
-			return CONTENT_TYPES[i].text;
-		}
-	}
-	return "text/plain";
-}
+typedef struct ServerState {
+	int server_fd;
+	CompiledRegex regex;
+	MiddlewareHandler* middleware;
+} ServerState;
 
 void send_header(PHttpRequest request)
 {
@@ -128,11 +45,14 @@ void send_header(PHttpRequest request)
 			"HTTP/1.1 %d %s\r\n"
 			"Content-Type: %s\r\n"
 			"Content-Length: %d\r\n"
-			//"Connection: keep-alive\r\n"
+			//"Content-Encoding: gzip\r\n"
+			"Connection: keep-alive\r\n"
+			"Keep-Alive: timeout=5, max=1000\r\n"
+			//"Connection: close\r\n"
 			"\r\n",
 		request->response.status_code, 
-		GetHttpStatusCodeMessage(request->response.status_code),
-		GetHttpContentTypeText(request->response.content_type),
+		http_get_status_code_message(request->response.status_code),
+		http_get_content_type_text(request->response.content_type),
 		request->response.content_length);
 	send(request->client_fd, buffer, header_length, 0);
 }
@@ -170,16 +90,10 @@ void send_302(PHttpRequest request, const char* path)
 			"Location: %s\r\n"
 			"\r\n",
 		request->response.status_code, 
-		GetHttpStatusCodeMessage(request->response.status_code),
+		http_get_status_code_message(request->response.status_code),
 		path);
 	send(request->client_fd, buffer, header_length, 0);
 }
-
-typedef struct CompiledRegex {
-	regex_t request_line;
-	regex_t uri_double_dots;
-	regex_t uri_valid_chars;
-} CompiledRegex;
 
 int read_request(CompiledRegex* regx, PHttpRequest request, char* buffer, int buffer_size)
 {
@@ -203,98 +117,6 @@ int read_request(CompiledRegex* regx, PHttpRequest request, char* buffer, int bu
 	return 1;
 }
 
-/* try to open file to serve. if path is a directory
- * try to open the default file index.html.
- * return value is a file descriptor.
- * return -1 if file cannot be found.
- * return -2 if a 302 should be sent with appended / */
-int try_open_file_or_default(PHttpRequest request) {
-		
-	char path_buffer[1024] = {0};
-
-	int uri_length = strlen(request->uri);
-	// -1 to always leave a terminating 0 at the end
-	int buffer_length = ARRAY_SIZE(path_buffer) - 1;
-	int path_length = 0;
-
-	// if the final character is a slash try to open
-	// the default index.html file in the directory
-	// we know from the regex uri validation that the first
-	// character will always be a slash
-	if (request->uri[uri_length - 1] == '/') {
-		path_length = snprintf(path_buffer, buffer_length, ".%sindex.html", request->uri);
-	} else {
-		path_length = snprintf(path_buffer, buffer_length, ".%s", request->uri);
-	}
-
-	// path was greater than the buffer so return error
-	if (path_length == buffer_length) return 0;
-
-	// tolower all characters in the path
-	// all served files should be lower case
-	for(int i = 0; path_buffer[i] != '\0'; i++) {
-		path_buffer[i] = tolower(path_buffer[i]);
-	}
-
-	// path could not be found as a file or dir so return error
-	struct stat stat_buffer;
-	if (lstat(path_buffer, &stat_buffer) != 0) return -1;
-
-	// path found, open for reading and return the file descriptor
-	if (S_ISREG(stat_buffer.st_mode)) {
-		SetHttpContentTypeFromFilePath(request, path_buffer, path_length);
-		return open(path_buffer, O_RDONLY);
-	}
-	
-	// path is a directory but it did not end in a '/'
-	// send back a code to inform the the caller a 302
-	// should be generated with the / at the end.
-	if (S_ISDIR(stat_buffer.st_mode)) {
-		return -2;
-	}
-
-	// no path could be found so return error
-	return -1;
-}
-
-void serve_static_file(PHttpRequest request)
-{
-	int file_fd = try_open_file_or_default(request);
-	
-	if (file_fd == -1) { 
-		send_404(request);
-	}
-	if (file_fd == -2) {
-		char path_302[1024] = {0};
-		snprintf(path_302, ARRAY_SIZE(path_302) - 1, "%s/", request->uri);
-		send_302(request, path_302);
-	}
-	else {
-		struct stat file_stat;
-		fstat(file_fd, &file_stat);
-		off_t file_size = file_stat.st_size;
-		request->response.status_code = 200;
-		request->response.content_length = file_size;
-		send_header(request);
-		send_file(request->client_fd, file_fd);
-		close(file_fd);
-	}
-}
-
-typedef struct MiddlewareHandler MiddlewareHandler;
-typedef struct ServerState ServerState;
-
-typedef struct MiddlewareHandler {
-	struct MiddlewareHandler* next;
-	void (*run)(ServerState*, HttpRequest*, MiddlewareHandler*);
-} MiddlewareHandler;
-
-typedef struct ServerState {
-	int server_fd;
-	CompiledRegex regex;
-	MiddlewareHandler* middleware;
-} ServerState;
-
 void Server_Init(ServerState* state) {
 	regcomp(&state->regex.request_line, "^([A-Z]+) (/[^ ]*) HTTP/1.1\r\n", REG_EXTENDED);
 	regcomp(&state->regex.uri_double_dots, "\\.\\.", REG_EXTENDED);
@@ -317,7 +139,21 @@ void Server_AddMiddleware(ServerState* state, MiddlewareHandler* handler) {
 	}
 }
 
+volatile sig_atomic_t server_is_running = 1;
+
+static void Server_SignalCatch(int signo) {
+	if (signo == SIGINT) {
+		server_is_running = 0;
+	}
+}
+
 void Server_Run(ServerState* state) {
+
+	/*if (signal(SIGINT, Server_SignalCatch) == SIG_ERR) {
+		perror("Unable to set signal handler!");
+		return;
+	}*/
+
 	struct sockaddr_in server_addr = {0};
 
 	if ((state->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -342,7 +178,7 @@ void Server_Run(ServerState* state) {
 	}
 	printf("listening on port: %d\n", PORT);
 
-	while(1) {
+	while(server_is_running) {
 		struct sockaddr_in client_addr = {0};
 		socklen_t client_addr_len = sizeof(client_addr);
 
@@ -353,8 +189,6 @@ void Server_Run(ServerState* state) {
 		char read_buffer[BUFFER_SIZE] = {0};
 		if (read_request(&state->regex, &request, read_buffer, BUFFER_SIZE - 1) != 1) goto CLEANUP;
 		
-		printf("%s\n", request.uri);
-
 		state->middleware->run(state, &request, state->middleware->next);
 		
 		CLEANUP:
@@ -370,49 +204,5 @@ void Server_Run(ServerState* state) {
 	}
 }
 
-void ErrorHandler(ServerState* state, HttpRequest* request, MiddlewareHandler* next) {
-	if (next) {
-		next->run(state, request, next->next);
-		if (request->response.status_code >= 400) {
-			// send pretty error page
-		}
-	}
-	if (request->response.status_code == 0) {
-		// send an error about no handler found
-	}
-}
 
-/*
-	StaticFileHandler
-	Run the next middleware in the chain if it exists.
-	If no middleware handled the request ( status_code == 0 ),
-	then try to look for a file to send as the response.
 
-	TODO: try caching the file so we don't have to stream from disk
-		  as often.
-*/
-void StaticFileHandler(ServerState* state, HttpRequest* request, MiddlewareHandler* next) {
-	if (next) {
-		next->run(state, request, next->next);
-	}
-	if (request->response.status_code == 0) {
-		serve_static_file(request);		
-	}
-}
-
-int main(int argc, char **argv)
-{
-	ServerState state = {0};
-	Server_Init(&state);
-
-	MiddlewareHandler error_handler = { .run = ErrorHandler };
-	Server_AddMiddleware(&state, &error_handler);
-
-	MiddlewareHandler static_file_handler = { .run = StaticFileHandler };
-	Server_AddMiddleware(&state, &static_file_handler);
-
-	Server_Run(&state);
-	Server_Destroy(&state);
-	
-	return 0;
-}
