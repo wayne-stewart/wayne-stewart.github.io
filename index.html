@@ -2,16 +2,83 @@
 <html>
 <head>
   <title>My Github Repo Site</title>
-  <style>p { font-weight:bold; }</style>
+  <style>
+    * {
+      padding:0px;
+      margin:0px;
+      border:none;
+    }
+    body {
+      background-color:#101010;
+    }
+    div.primary-content {
+      max-width:1024px;
+      margin-left:auto;
+      margin-right:auto;
+      height:100vh;
+      /*border-left: 2px #DDDDDD solid;
+      border-right: 2px #DDDDDD solid;*/
+    }
+    div.section-content {
+      margin-top:20px;
+      border: 2px #DDDDDD solid;
+      border-radius: 10px;
+      overflow:hidden;
+    }
+    div.item {
+      padding: 10px 10px 10px 10px;
+      font-weight:bold;
+      color:#DDDDDD;
+    }
+    div.header {
+      font-size: 1.5em;
+      border-bottom: 2px #DDDDDD solid;
+    }
+    div.alt-color {
+      background-color:#1A1A1A;
+    }
+    a {
+      text-decoration:none;
+      color:#DDDDDD;
+    }
+    a:hover {
+      text-decoration:underline;
+    }
+    div.vert-bar {
+      display:inline-block;
+      width:2px;
+      height:18px;
+      background-color:#DDDDDD;
+      margin-left:10px;
+      margin-right:10px;
+      margin-bottom:-3px;
+    }
+  </style>
 </head>
 <body>
-  <p>Projects</p>
-  <p><a href="/app/fractal">Fractal</a></p>
-  <p><a href="/app/tetris">Tetris</a></p>
-  <p><a href="/app/game-of-life">Conway's Game of Life</a></p>
-  <p><a href="/app/pong">Pong</a></p>
-  <p><a href="javascript:(function() { if (typeof SleepingCrane === 'undefined') { document.body.appendChild(document.createElement('script')).src = 'https://wayne-stewart.github.io/app/sleeping-crane/boot.js?' + (new Date()).getTime(); } else { SleepingCrane.start(); }})();">Sleeping Crane</a></p>
-  <p><a href="/doc/init.vim">init.vim</a></p>
-  <p><a href="/app/lovesac-room-config">LoveSac Room Config</a></p>
+  <div class="primary-content">
+    <div class="section-content">
+      <div class="item header">Games</div>
+      <div class="item alt-color">Tetris<br>Code<div class="vert-bar"></div><a href="/app/tetris">Live</a></div>
+      <div class="item">Pong<br>Code<div class="vert-bar"></div><a href="/app/pong">Live</a></div>
+      <div class="item alt-color" class="alt-color">Conway's Game of Life<br>Code<div class="vert-bar"></div><a href="/app/game-of-life">Live</a></div>
+    </div>
+
+    <div class="section-content">
+      <div class="item header">Art</div>
+      <div class="item alt-color"><a href="/app/fractal">Fractal</a></div>
+    </div>
+    
+    <div class="section-content">
+      <div class="item header">Tools</div>
+      <div class="item alt-color"><a href="javascript:(function() { if (typeof SleepingCrane === 'undefined') { document.body.appendChild(document.createElement('script')).src = 'https://wayne-stewart.github.io/app/sleeping-crane/boot.js?' + (new Date()).getTime(); } else { SleepingCrane.start(); }})();">Sleeping Crane</a></div>
+      <div class="item"><a href="/app/lovesac-room-config">LoveSac Room Config</a></div>
+    </div>
+    
+    <div class="section-content">
+      <div class="item header">Docs</div>
+      <div class="item alt-color"><a href="/doc/init.vim">init.vim</a></div>
+    </div>
+  </div>
 </body>
 </html>
