@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <stdarg.h>
 #include <regex.h>
 #include <string.h>
 #include <unistd.h>
@@ -21,12 +23,15 @@
 #include <signal.h>
 
 #define PORT 8080
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 4084 /* 4096 - 12 ( 3 u32 integers ) */
 
+#define u8 char
+#define u32 uint32_t
 #define ARRAY_SIZE(array_name) (sizeof(array_name) / sizeof(array_name[0]))
 
 #include "http/content_types.c"
 #include "http/status_codes.c"
+#include "http/headers.c"
 #include "server.c"
 #include "error_handler.c"
 #include "static_file_handler.c"

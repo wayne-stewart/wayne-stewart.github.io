@@ -7,27 +7,23 @@
  * return value is a file descriptor.
  * return -1 if file cannot be found.
  * return -2 if a 302 should be sent with appended / */
-int try_open_file_or_default(PHttpRequest request) {
+int try_open_file_or_default(HttpContext* context, u8* path_buffer, u32 path_buffer_length) {
 		
-	char path_buffer[1024] = {0};
-
-	int uri_length = strlen(request->uri);
-	// -1 to always leave a terminating 0 at the end
-	int buffer_length = ARRAY_SIZE(path_buffer) - 1;
+	int uri_length = strlen(context->request.uri);
 	int path_length = 0;
 
 	// if the final character is a slash try to open
 	// the default index.html file in the directory
 	// we know from the regex uri validation that the first
 	// character will always be a slash
-	if (request->uri[uri_length - 1] == '/') {
-		path_length = snprintf(path_buffer, buffer_length, ".%sindex.html", request->uri);
+	if (context->request.uri[uri_length - 1] == '/') {
+		path_length = snprintf(path_buffer, path_buffer_length, ".%sindex.html", context->request.uri);
 	} else {
-		path_length = snprintf(path_buffer, buffer_length, ".%s", request->uri);
+		path_length = snprintf(path_buffer, path_buffer_length, ".%s", context->request.uri);
 	}
 
 	// path was greater than the buffer so return error
-	if (path_length == buffer_length) return 0;
+	if (path_length == path_buffer_length) return 0;
 
 	// tolower all characters in the path
 	// all served files should be lower case
@@ -41,7 +37,6 @@ int try_open_file_or_default(PHttpRequest request) {
 
 	// path found, open for reading and return the file descriptor
 	if (S_ISREG(stat_buffer.st_mode)) {
-		request->response.content_type = http_get_content_type_from_file_path(path_buffer, path_length);
 		return open(path_buffer, O_RDONLY);
 	}
 	
@@ -56,29 +51,30 @@ int try_open_file_or_default(PHttpRequest request) {
 	return -1;
 }
 
-void serve_static_file(PHttpRequest request)
+void serve_static_file(HttpContext* context)
 {
-	int file_fd = try_open_file_or_default(request);
+	char path_buffer[1024] = {0};
+	u32 path_length = ARRAY_SIZE(path_buffer);
+	u32 path_length_minus_2 = ARRAY_SIZE(path_buffer) - 2;
+	u32 path_length_minus_1 = ARRAY_SIZE(path_buffer) - 1;
+
+	// -2 on the path buffer to make sure there is room for / and a trailing 0
+	int file_fd = try_open_file_or_default(context, path_buffer, path_length_minus_2);
 	
 	if (file_fd == -1) { 
-		send_404(request);
+		send_404(context);
 		return;
 	}
 
 	if (file_fd == -2) {
-		char path_302[1024] = {0};
-		snprintf(path_302, ARRAY_SIZE(path_302) - 1, "%s/", request->uri);
-		send_302(request, path_302);
+		memset(path_buffer, 0, path_length);
+		snprintf(path_buffer, path_length_minus_1, "%s/", context->request.uri);
+		send_302(context, path_buffer);
 		return;
 	}
 	
-	struct stat file_stat;
-	fstat(file_fd, &file_stat);
-	off_t file_size = file_stat.st_size;
-	request->response.status_code = 200;
-	request->response.content_length = file_size;
-	send_header(request);
-	send_file(request->client_fd, file_fd);
+	send_file(context, file_fd, path_buffer);
+
 	close(file_fd);
 }
 
@@ -91,12 +87,12 @@ void serve_static_file(PHttpRequest request)
 	TODO: try caching the file so we don't have to stream from disk
 		  as often.
 */
-void StaticFileHandler(ServerState* state, HttpRequest* request, MiddlewareHandler* next) {
+void StaticFileHandler(ServerState* state, HttpContext* context, MiddlewareHandler* next) {
 	if (next) {
-		next->run(state, request, next->next);
+		next->run(state, context, next->next);
 	}
-	if (request->response.status_code == 0) {
-		serve_static_file(request);		
+	if (context->response.status_code == 0) {
+		serve_static_file(context);		
 	}
 }
 

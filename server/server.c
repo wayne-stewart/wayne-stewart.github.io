@@ -4,17 +4,22 @@
 
 typedef struct HttpResponse {
 	int status_code;
-	int content_length;
-	HttpContentTypes content_type;
-} HttpResponse, *PHttpResponse;
+	HttpHeaders headers;
+} HttpResponse;
 
 typedef struct HttpRequest {
-	int client_fd;
 	const char* method;
 	const char* uri;
 	const char* http_version;
+} HttpRequest;
+
+typedef struct HttpContext {
+	Buffer read_buffer;
+	Buffer write_buffer;
+	HttpRequest request;
 	HttpResponse response;
-} HttpRequest, *PHttpRequest;
+	int client_fd;
+} HttpContext;
 
 typedef struct CompiledRegex {
 	regex_t request_line;
@@ -27,7 +32,7 @@ typedef struct ServerState ServerState;
 
 typedef struct MiddlewareHandler {
 	struct MiddlewareHandler* next;
-	void (*run)(ServerState*, HttpRequest*, MiddlewareHandler*);
+	void (*run)(ServerState*, HttpContext*, MiddlewareHandler*);
 } MiddlewareHandler;
 
 typedef struct ServerState {
@@ -36,83 +41,69 @@ typedef struct ServerState {
 	MiddlewareHandler* middleware;
 } ServerState;
 
-void send_header(PHttpRequest request)
+void send_file(HttpContext* context, int file_fd, const char* file_path)
 {
-	char buffer[BUFFER_SIZE] = {0};
-	size_t header_length = snprintf(
-		buffer,
-		BUFFER_SIZE,
-			"HTTP/1.1 %d %s\r\n"
-			"Content-Type: %s\r\n"
-			"Content-Length: %d\r\n"
-			//"Content-Encoding: gzip\r\n"
-			"Connection: keep-alive\r\n"
-			"Keep-Alive: timeout=5, max=1000\r\n"
-			//"Connection: close\r\n"
-			"\r\n",
-		request->response.status_code, 
-		http_get_status_code_message(request->response.status_code),
-		http_get_content_type_text(request->response.content_type),
-		request->response.content_length);
-	send(request->client_fd, buffer, header_length, 0);
-}
-
-void send_text(int socket_fd, const char* text, int text_length)
-{
-	send(socket_fd, text, text_length, 0);
-}
-
-void send_file(int socket_fd, int file_fd)
-{
-	char buffer[BUFFER_SIZE] = {0};
-	size_t bytes_read;
-	while((bytes_read = read(file_fd, buffer, BUFFER_SIZE)) > 0) {
-		send(socket_fd, buffer, bytes_read, 0);
+	struct stat file_stat;
+	fstat(file_fd, &file_stat);
+	off_t file_size = file_stat.st_size;
+	context->response.status_code = 200;
+	context->response.headers.content_length = file_size;
+	context->response.headers.content_type = http_get_content_type_from_file_path(file_path);
+	http_write_headers(
+		&context->write_buffer, 
+		context->response.status_code, 
+		&context->response.headers);
+	Buffer* buffer = &context->write_buffer;
+	if (buffer->length > 0) {
+		send(context->client_fd, buffer->data, buffer->length, 0);
+		buffer->length = 0;
+	}
+	while((buffer->length = read(file_fd, buffer->data, buffer->size)) > 0) {
+		send(context->client_fd, buffer->data, buffer->length, 0);
 	}
 }
 
-void send_404(PHttpRequest request)
+void send_404(HttpContext* context)
 {
-	request->response.status_code = 404;
-	request->response.content_length = 0;
-	request->response.content_type = CONTENT_TYPE_PLAIN;
-	send_header(request);
+	context->response.status_code = 404;
+	context->response.headers.content_length = 0;
+	context->response.headers.content_type = CONTENT_TYPE_PLAIN;
+	http_write_headers(
+		&context->write_buffer,
+		context->response.status_code, 
+		&context->response.headers);
+	send(context->client_fd, context->write_buffer.data, context->write_buffer.length, 0);
 }
 
-void send_302(PHttpRequest request, const char* path)
+void send_302(HttpContext* context, u8* path)
 {
-	request->response.status_code = 302;	
-	char buffer[BUFFER_SIZE] = {0};
-	size_t header_length = snprintf(
-		buffer,
-		BUFFER_SIZE,
-			"HTTP/1.1 %d %s\r\n"
-			"Location: %s\r\n"
-			"\r\n",
-		request->response.status_code, 
-		http_get_status_code_message(request->response.status_code),
-		path);
-	send(request->client_fd, buffer, header_length, 0);
+	context->response.status_code = 302;
+	context->response.headers.location = path;
+	http_write_headers(
+		&context->write_buffer, 
+		context->response.status_code, 
+		&context->response.headers);
+	send(context->client_fd, context->write_buffer.data, context->write_buffer.length, 0);
 }
 
-int read_request(CompiledRegex* regx, PHttpRequest request, char* buffer, int buffer_size)
+int read_request(ServerState* state, HttpContext* context)
 {
-	size_t bytes_received = recv(request->client_fd, buffer, buffer_size, 0);
-	if (bytes_received == 0) { perror("failed to read from network stream"); return 0; }
+	context->read_buffer.length = recv(context->client_fd, context->read_buffer.data, context->read_buffer.size, 0);
+	if (context->read_buffer.length == 0) { perror("failed to read from network stream"); return 0; }
 	
 	regmatch_t matches[3];
-	if (regexec(&regx->request_line, buffer, 3, matches, 0) != 0) return 0;
+	if (regexec(&state->regex.request_line, context->read_buffer.data, 3, matches, 0) != 0) return 0;
 
-	buffer[matches[1].rm_eo] = '\0'; // null terminator for method
-	buffer[matches[2].rm_eo] = '\0'; // null terminator for URI
-	request->method = buffer + matches[1].rm_so;
-	request->uri = buffer + matches[2].rm_so;
+	context->read_buffer.data[matches[1].rm_eo] = '\0'; // null terminator for method
+	context->read_buffer.data[matches[2].rm_eo] = '\0'; // null terminator for URI
+	context->request.method = context->read_buffer.data + matches[1].rm_so;
+	context->request.uri = context->read_buffer.data + matches[2].rm_so;
 
 	// if double dots are found, request validation fails
-	if (regexec(&regx->uri_double_dots, request->uri, 1, matches, 0) == 0) return 0;
+	if (regexec(&state->regex.uri_double_dots, context->request.uri, 1, matches, 0) == 0) return 0;
 
 	// make sure there are no unexpected characters in the uri
-	if (regexec(&regx->uri_valid_chars, request->uri, 1, matches, 0) != 0) return 0;
+	if (regexec(&state->regex.uri_valid_chars, context->request.uri, 1, matches, 0) != 0) return 0;
 
 	return 1;
 }
@@ -182,24 +173,26 @@ void Server_Run(ServerState* state) {
 		struct sockaddr_in client_addr = {0};
 		socklen_t client_addr_len = sizeof(client_addr);
 
-		HttpRequest request = {0};
-		request.client_fd = accept(state->server_fd, (struct sockaddr*)&client_addr, &client_addr_len);
-		if (request.client_fd < 0) { perror("accept failed"); goto CLEANUP; }
+		HttpContext context = {0};
+		buffer_init(&context.read_buffer);
+		buffer_init(&context.write_buffer);
+
+		context.client_fd = accept(state->server_fd, (struct sockaddr*)&client_addr, &client_addr_len);
+		if (context.client_fd < 0) { perror("accept failed"); goto CLEANUP; }
 		
-		char read_buffer[BUFFER_SIZE] = {0};
-		if (read_request(&state->regex, &request, read_buffer, BUFFER_SIZE - 1) != 1) goto CLEANUP;
+		if (read_request(state, &context) != 1) goto CLEANUP;
 		
-		state->middleware->run(state, &request, state->middleware->next);
+		state->middleware->run(state, &context, state->middleware->next);
 		
 		CLEANUP:
-		if (request.uri) {
-			printf("%d %s %s\n", request.response.status_code, request.method, request.uri);
+		if (context.request.uri) {
+			printf("%d %s %s\n", context.response.status_code, context.request.method, context.request.uri);
 		}
 		else {
 			printf("Could not parse request line\n");
 		}
-		if (request.client_fd) {
-			close(request.client_fd);
+		if (context.client_fd) {
+			close(context.client_fd);
 		}
 	}
 }

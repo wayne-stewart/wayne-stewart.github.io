@@ -31,8 +31,9 @@ const HttpContentType CONTENT_TYPES[] = {
 	{ CONTENT_TYPE_WASM,	".wasm",	"application/wasm" }
 };
 
-HttpContentTypes http_get_content_type_from_file_path(const char* file_path, int path_length)
+HttpContentTypes http_get_content_type_from_file_path(const char* file_path)
 {
+	u32 path_length = strlen(file_path);
 	for(int i = 0; i < ARRAY_SIZE(CONTENT_TYPES); i++) {
 		int file_ext_len = strlen(CONTENT_TYPES[i].file_extension);
 		if (path_length > file_ext_len) {
