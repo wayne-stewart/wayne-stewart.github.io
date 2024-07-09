@@ -25,7 +25,7 @@
 #define PORT 8080
 #define BUFFER_SIZE 4084 /* 4096 - 12 ( 3 u32 integers ) */
 
-#define u8 char
+#define u8 unsigned char
 #define u32 uint32_t
 #define ARRAY_SIZE(array_name) (sizeof(array_name) / sizeof(array_name[0]))
 
@@ -41,11 +41,11 @@ int main(int argc, char **argv)
 	ServerState state = {0};
 	Server_Init(&state);
 
-	MiddlewareHandler error_handler = { .run = ErrorHandler };
-	Server_AddMiddleware(&state, &error_handler);
+	MiddlewareHandler error_middleware= { .run = middleware_error_handler };
+	Server_AddMiddleware(&state, &error_middleware);
 
-	MiddlewareHandler static_file_handler = { .run = StaticFileHandler };
-	Server_AddMiddleware(&state, &static_file_handler);
+	MiddlewareHandler static_file_middleware = { .run = middleware_static_file_handler };
+	Server_AddMiddleware(&state, &static_file_middleware);
 
 	Server_Run(&state);
 	Server_Destroy(&state);

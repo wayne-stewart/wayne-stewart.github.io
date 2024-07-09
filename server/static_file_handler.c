@@ -7,7 +7,7 @@
  * return value is a file descriptor.
  * return -1 if file cannot be found.
  * return -2 if a 302 should be sent with appended / */
-int try_open_file_or_default(HttpContext* context, u8* path_buffer, u32 path_buffer_length) {
+int middleware_static_file_try_open(HttpContext* context, u8* path_buffer, u32 path_buffer_length) {
 		
 	int uri_length = strlen(context->request.uri);
 	int path_length = 0;
@@ -51,7 +51,7 @@ int try_open_file_or_default(HttpContext* context, u8* path_buffer, u32 path_buf
 	return -1;
 }
 
-void serve_static_file(HttpContext* context)
+void middleware_static_file_serve(HttpContext* context)
 {
 	char path_buffer[1024] = {0};
 	u32 path_length = ARRAY_SIZE(path_buffer);
@@ -59,7 +59,7 @@ void serve_static_file(HttpContext* context)
 	u32 path_length_minus_1 = ARRAY_SIZE(path_buffer) - 1;
 
 	// -2 on the path buffer to make sure there is room for / and a trailing 0
-	int file_fd = try_open_file_or_default(context, path_buffer, path_length_minus_2);
+	int file_fd = middleware_static_file_try_open(context, path_buffer, path_length_minus_2);
 	
 	if (file_fd == -1) { 
 		send_404(context);
@@ -87,12 +87,12 @@ void serve_static_file(HttpContext* context)
 	TODO: try caching the file so we don't have to stream from disk
 		  as often.
 */
-void StaticFileHandler(ServerState* state, HttpContext* context, MiddlewareHandler* next) {
+void middleware_static_file_handler(ServerState* state, HttpContext* context, MiddlewareHandler* next) {
 	if (next) {
 		next->run(state, context, next->next);
 	}
 	if (context->response.status_code == 0) {
-		serve_static_file(context);		
+		middleware_static_file_serve(context);		
 	}
 }
 
