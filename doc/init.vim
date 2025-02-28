@@ -10,6 +10,7 @@ set relativenumber
 "set cc=120
 set scrolloff=10
 syntax on
+colorscheme sorbet
 
 autocmd Filetype html setlocal ts=2 sw=2 expandtab
 
