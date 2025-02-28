@@ -1,11 +1,13 @@
 " ~/.config/nvim/init.vim
+" powershell curl https://wayne-stewart.github.io/doc/init.vim -o $env:LOCALAPPDATA/nvim/init.vim
 
 set tabstop=4
 set shiftwidth=4
 set ignorecase
 set autoindent
 set number
-set cc=120
+set relativenumber
+"set cc=120
 set scrolloff=10
 syntax on
 
